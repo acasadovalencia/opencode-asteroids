@@ -32,11 +32,12 @@ Luego visita `http://localhost:3000`.
 
 ## Puntuación
 
-| Asteroide | Puntos |
-| --------- | ------ |
-| Grande    | 20     |
-| Mediano   | 50     |
-| Pequeño   | 100    |
+| Asteroide      | Puntos |
+| -------------- | ------ |
+| Grande         | 20     |
+| Mediano        | 50     |
+| Pequeño        | 100    |
+| Estrella fugaz | 300    |
 
 ## Características
 
@@ -44,3 +45,4 @@ Luego visita `http://localhost:3000`.
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
 - Power-up de **Velocidad**: al destruir un asteroide hay un 12% de probabilidad de que suelte un rayo cian. Al cogerlo, la nave se mueve el **doble de rápido durante 5 segundos** (el giro no cambia). Dura 10 s en el mapa si nadie lo coge, y se pierde al morir. El HUD muestra una barra descendiente con el tiempo que queda (parpadea en el último segundo).
+- **Estrella fugaz**: asteroide especial que entra por un borde y cruza la pantalla en línea recta a ~3× la velocidad de un asteroide pequeño, con brillo ámbar y estela. Dura 5–8 s y luego se desvanece (parpadea en los últimos 1,5 s). Mata al chocar con la nave. Destruirla da **300 puntos**, pero no se parte en fragmentos ni suelta power-ups. Aparece cada 8–14 s (máximo una a la vez) y no bloquea el cambio de nivel.

@@ -30,6 +30,30 @@ Luego visita `http://localhost:3000`.
 | `↑`       | Propulsar  |
 | `Espacio` | Disparar   |
 
+En la **pantalla de selección** y en el **Game Over** los controles cambian:
+
+| Tecla     | Acción                                            |
+| --------- | ------------------------------------------------- |
+| `←` `→`   | Cambiar de nave (selección)                       |
+| `Espacio` | Empezar a jugar (selección) / reiniciar (Game Over) |
+| `S`       | Volver a la selección de naves (solo en Game Over) |
+
+## Skins
+
+La apariencia de la nave es configurable. Al abrir el juego aparece una pantalla de **selección** con una vista previa grande y animada; con `←` `→` se cambia de nave y con `Espacio` se empieza a jugar. La nave elegida se aplica también a los **iconos de vida** del HUD y a la **llama del propulsor**, y queda guardada en `localStorage` (`asteroids.skin`), así que se recuerda en la siguiente partida.
+
+Skins incluidas:
+
+| Nombre    | Apariencia                                   |
+| --------- | -------------------------------------------- |
+| Clásica   | Contorno blanco (silueta original)           |
+| Sólida    | Silueta rellena en blanco                    |
+| Neón      | Contorno cian con halo                       |
+| Dorada    | Contorno ámbar con halo y llama ámbar        |
+| Esmeralda | Contorno verde wireframe                     |
+
+Las skins son puramente cosméticas: la hitbox de la nave no cambia. Durante el power-up de **Velocidad**, cualquier skin recibe un halo cian para que el efecto siga siendo visible.
+
 ## Puntuación
 
 | Asteroide      | Puntos |

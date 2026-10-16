@@ -2,7 +2,7 @@
 
 ## Project shape
 
-- Single-file vanilla JS game: all logic lives in `game.js` (~420 lines), loaded as a plain (non-module) `<script>` from `index.html`. No bundler, no dependencies, no `package.json`.
+- Single-file vanilla JS game: all logic lives in `game.js` (~420 lines), loaded as a plain (non-module) `<script>` from `index.html`. No bundler, no dependencies, no `package.json`. 
 - Everything is global-scope top-level code (`class Ship`, `function update(dt)`, …). Do not add `import`/`export`, npm tooling, or a build step — that constraint is deliberate (see `README.md`).
 - Sections in `game.js` are marked with `// ── Nombre ──` comment dividers: Input, Utils, Bullet, Asteroid, Ship, Partículas, Estado del juego, Update, Draw, Loop principal. Put new code in the matching section.
 - Comments, UI strings, and `README.md` are in Spanish. Match that language for in-game text and docs.

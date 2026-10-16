@@ -213,12 +213,20 @@ class ShootingStar extends Asteroid {
 }
 
 // ── PowerUp ───────────────────────────────────────────────────────────────────
+// Color y relleno de cada tipo de pickup. Al añadir un tipo, basta con meterlo
+// aquí, dibujar su icono en `PowerUp.draw()` y repartir su probabilidad en `update()`.
+const POWERUP_STYLE = {
+  vel:    { color: '#7df',    fill: 'rgba(119, 221, 255, 0.18)' },   // rayo cian
+  triple: { color: '#ffb347', fill: 'rgba(255, 179, 71, 0.18)' },    // tres puntos ámbar
+  shield: { color: '#7f9',    fill: 'rgba(119, 255, 153, 0.18)' },   // burbuja verde
+};
+
 class PowerUp {
   constructor(x, y, type = 'vel') {
     this.x = x;
     this.y = y;
-    this.type  = type;   // 'vel' (boost de velocidad) | 'triple' (triple shot)
-    this.color = type === 'vel' ? '#7df' : '#ffb347';
+    this.type  = type;   // 'vel' (velocidad) | 'triple' (triple shot) | 'shield' (escudo)
+    this.color = POWERUP_STYLE[type].color;
     this.radius = 10;
     this.ttl    = 10;   // desaparece a los 10 s si nadie lo coge
     this.dead   = false;
@@ -243,8 +251,7 @@ class PowerUp {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.strokeStyle = this.color;
-    ctx.fillStyle   = this.type === 'vel' ? 'rgba(119, 221, 255, 0.18)'
-                                          : 'rgba(255, 179, 71, 0.18)';
+    ctx.fillStyle   = POWERUP_STYLE[this.type].fill;
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
 
@@ -265,14 +272,21 @@ class PowerUp {
       ctx.lineTo( 1, -1);
       ctx.closePath();
       ctx.stroke();
-    } else {
+    } else if (this.type === 'triple') {
       // Tres puntos en fila (triple shot)
-      ctx.fillStyle = this.color;
       for (const px of [-5, 0, 5]) {
         ctx.beginPath();
         ctx.arc(px, 0, 1.8, 0, Math.PI * 2);
         ctx.fill();
       }
+    } else {
+      // Burbuja: cúpula sobre base (escudo)
+      ctx.beginPath();
+      ctx.arc(0, 1, 5.5, Math.PI, 0);   // arco superior
+      ctx.lineTo( 5.5, 3);
+      ctx.lineTo(-5.5, 3);
+      ctx.closePath();
+      ctx.stroke();
     }
 
     ctx.restore();
@@ -336,6 +350,9 @@ const BOOST_MULT = 2;       // duplica el empuje con el power-up de velocidad
 const BOOST_DURATION = 5;   // duración del boost en segundos
 const TRIPLE_DURATION = 5;  // duración del triple shot en segundos
 const TRIPLE_SPREAD = 10;   // separación lateral (px) de las 3 balas en línea
+const SHIELD_MAX = 3;       // cargas que otorga un power-up de escudo
+const SHIELD_RADIUS = 24;   // radio de la burbuja del escudo alrededor de la nave
+const SHIELD_GRACE = 0.6;   // s de gracia tras bloquear (evita drenar cargas de golpe)
 
 class Ship {
   constructor() { this.reset(); }
@@ -352,6 +369,9 @@ class Ship {
     this.shootCooldown = 0;
     this.boost         = 0;   // segundos restantes del boost de velocidad
     this.triple        = 0;   // segundos restantes del triple shot
+    this.shield        = 0;   // cargas restantes del escudo
+    this.shieldGrace   = 0;   // gracia tras bloquear un impacto
+    this.shieldFlash   = 0;   // destello visual al bloquear
     this.dead          = false;
   }
 
@@ -361,6 +381,8 @@ class Ship {
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
     if (this.boost         > 0) this.boost         -= dt;
     if (this.triple        > 0) this.triple        -= dt;
+    if (this.shieldGrace   > 0) this.shieldGrace   -= dt;
+    if (this.shieldFlash   > 0) this.shieldFlash   -= dt;
 
     const ROT   = 3.5;   // rad/s
     const THRUST = 260;  // px/s²
@@ -427,6 +449,35 @@ class Ship {
     }
 
     ctx.restore();
+
+    // Burbuja del escudo: anillo verde con pulso sutil y onda expansiva al bloquear
+    if (this.shield > 0) {
+      const t = performance.now() / 1000;
+      // Con una sola carga restante parpadea para avisar de que se agota
+      const blinkOff = this.shield === 1 && Math.floor(t * 6) % 2 === 0;
+      if (!blinkOff) {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 4);   // 0..1
+        let r = SHIELD_RADIUS + pulse * 2;
+        let alpha = 0.35 + pulse * 0.2;
+        if (this.shieldFlash > 0) {                   // onda tras bloquear
+          const f = this.shieldFlash / SHIELD_GRACE;  // 1 -> 0
+          r     += (1 - f) * 10;                      // se expande
+          alpha += f * 0.5;                           // y se desvanece
+        }
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.strokeStyle = '#7f9';
+        ctx.fillStyle   = `rgba(119, 255, 153, ${alpha * 0.25})`;
+        ctx.lineWidth   = 2;
+        ctx.shadowColor = '#7f9';
+        ctx.shadowBlur  = 12;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
   }
 }
 
@@ -594,12 +645,13 @@ function update(dt) {
     if (!asteroids.some(a => a.especial)) spawnShootingStar();
   }
 
-  // Nave vs power-ups (velocidad o triple shot)
+  // Nave vs power-ups (velocidad, triple shot o escudo)
   for (const p of powerups) {
     if (dist(ship, p) < ship.radius + p.radius) {
       p.dead = true;
-      if (p.type === 'vel') ship.boost = BOOST_DURATION;
-      else                  ship.triple = TRIPLE_DURATION;
+      if      (p.type === 'vel')    ship.boost  = BOOST_DURATION;
+      else if (p.type === 'triple') ship.triple = TRIPLE_DURATION;
+      else                          ship.shield = SHIELD_MAX;   // recarga completa
     }
   }
 
@@ -622,11 +674,12 @@ function update(dt) {
           score += POINTS[a.size];
           explode(a.x, a.y, a.size * 5);
           newAsteroids.push(...a.split());
-          // Pickups: 12% de probabilidad total al destruir un asteroide
-          // (6% velocidad, 6% triple shot)
-          const r = Math.random();
-          if      (r < 0.06) powerups.push(new PowerUp(a.x, a.y, 'vel'));
-          else if (r < 0.12) powerups.push(new PowerUp(a.x, a.y, 'triple'));
+          // Suelte de power-ups: 20% de probabilidad total
+          // (8% velocidad, 6% triple shot, 6% escudo)
+          const drop = Math.random();
+          if      (drop < 0.08) powerups.push(new PowerUp(a.x, a.y, 'vel'));
+          else if (drop < 0.14) powerups.push(new PowerUp(a.x, a.y, 'triple'));
+          else if (drop < 0.20) powerups.push(new PowerUp(a.x, a.y, 'shield'));
         }
       }
     }
@@ -634,14 +687,27 @@ function update(dt) {
   asteroids = asteroids.filter(a => !a.dead).concat(newAsteroids);
   bullets   = bullets.filter(b => !b.dead);
 
-  // Nave vs asteroide
+  // Nave vs asteroide (el escudo bloquea el impacto y gasta una carga)
   if (ship.invincible <= 0) {
     for (const a of asteroids) {
       if (dist(ship, a) < ship.radius + a.radius * 0.82) {
-        killShip();
-        break;
+        if (ship.shield > 0 && ship.shieldGrace <= 0) {
+          // Bloquea: desintegra al atacante sin partirlo y gasta una carga
+          ship.shield--;
+          ship.shieldGrace = SHIELD_GRACE;
+          ship.shieldFlash = SHIELD_GRACE;
+          a.dead = true;
+          score += a.especial ? STAR_POINTS : POINTS[a.size];
+          explode(a.x, a.y, a.especial ? 16 : a.size * 5 + 4, '#7f9');
+        } else if (ship.shield <= 0) {
+          killShip();
+          break;
+        }
+        // Si shield > 0 pero en gracia, el impacto no hace nada este frame
       }
     }
+    // Retira en este frame los asteroides destruidos por el escudo
+    asteroids = asteroids.filter(a => !a.dead);
   }
 
   // Nivel completado (una estrella fugaz viva no bloquea el cambio)
@@ -687,13 +753,38 @@ function drawHUD() {
   for (let i = 0; i < lives; i++)
     drawLifeIcon(W - 16 - i * 22, 18);
 
-  // Barra del boost de velocidad
-  if (ship.boost > 0)
-    drawBuffBar(40, ship.boost, BOOST_DURATION, '#7df', 'VEL x2');
+  // Indicadores de buff apilados bajo el marcador: velocidad, triple, escudo.
+  // `by` es un cursor de fila (18 px por fila) para que nunca se solapen.
+  let by = 40;
+  if (ship.boost > 0) {
+    drawBuffBar(by, ship.boost, BOOST_DURATION, '#7df', 'VEL x2');
+    by += 18;
+  }
+  if (ship.triple > 0) {
+    drawBuffBar(by, ship.triple, TRIPLE_DURATION, '#ffb347', 'TRIPLE');
+    by += 18;
+  }
 
-  // Barra del triple shot (debajo de la de velocidad)
-  if (ship.triple > 0)
-    drawBuffBar(ship.boost > 0 ? 58 : 40, ship.triple, TRIPLE_DURATION, '#ffb347', 'TRIPLE');
+  // Pips de carga del escudo (bajo las barras activas)
+  if (ship.shield > 0) {
+    const sx = 14, sy = by + 4;
+    ctx.textAlign = 'left';
+    ctx.font      = '13px monospace';
+    ctx.fillStyle = '#7f9';
+    ctx.fillText('ESCUDO', sx, sy + 4);
+    for (let i = 0; i < SHIELD_MAX; i++) {
+      ctx.beginPath();
+      ctx.arc(sx + 66 + i * 14, sy, 4, 0, Math.PI * 2);
+      if (i < ship.shield) {
+        ctx.fillStyle = '#7f9';
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = 'rgba(119, 255, 153, 0.35)';
+        ctx.lineWidth   = 1.2;
+        ctx.stroke();
+      }
+    }
+  }
 }
 
 function drawOverlay(title, sub) {

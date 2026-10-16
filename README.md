@@ -43,3 +43,4 @@ Luego visita `http://localhost:3000`.
 - 3 vidas con invencibilidad temporal al reaparecer (parpadeo)
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
+- Power-up de **Velocidad**: al destruir un asteroide hay un 12% de probabilidad de que suelte un rayo cian. Al cogerlo, la nave se mueve el **doble de rápido durante 5 segundos** (el giro no cambia). Dura 10 s en el mapa si nadie lo coge, y se pierde al morir. El HUD muestra una barra descendiente con el tiempo que queda (parpadea en el último segundo).
